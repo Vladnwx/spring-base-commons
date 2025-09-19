@@ -31,10 +31,10 @@ dependencies {
     api("org.springframework:spring-tx:6.0.0")
 
     // Spring Web (для ResponseEntity и аннотаций контроллеров)
-    api("org.springframework:spring-web:6.0.0")
+    api("org.springframework:spring-web:6.2.8")
 
     // Spring Web MVC (для Thymeleaf контроллера)
-    api("org.springframework:spring-webmvc:6.0.0")
+    api("org.springframework:spring-webmvc:6.2.10")
 
     // Servlet API
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
