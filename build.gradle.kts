@@ -53,6 +53,16 @@ tasks.test {
 
 // Настройка публикации
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Vladnwx/spring-base-commons")
+            credentials {
+                username = System.getenv("USERNAME") ?: project.findProperty("gpr.user") as String? ?: ""
+                password = System.getenv("TOKEN") ?: project.findProperty("gpr.key") as String? ?: ""
+            }
+        }
+    }
     publications {
         create<MavenPublication>("maven") {
             groupId = "ru.savelevvn"
