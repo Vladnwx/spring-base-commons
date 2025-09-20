@@ -57,9 +57,10 @@ public abstract class BaseController<T extends BaseEntity<ID>, ID extends Serial
         if (!service.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-        entity.setId(id);
-        T updatedEntity = service.save(entity);
-        return ResponseEntity.ok(updatedEntity);
+        T updatedEntity = service.findById(id).orElse(entity);
+        //entity.setId(id);
+        T returnEntity = service.save(updatedEntity);
+        return ResponseEntity.ok(returnEntity);
     }
 
     /**

@@ -24,20 +24,47 @@ repositories {
 }
 
 dependencies {
-    // Ваши зависимости остаются без изменений
-    api("jakarta.persistence:jakarta.persistence-api:3.1.0")
-    compileOnly("org.projectlombok:lombok:1.18.30")
-    annotationProcessor("org.projectlombok:lombok:1.18.30")
-    api("org.springframework.data:spring-data-jpa:3.1.0")
-    api("org.springframework:spring-tx:6.0.0")
-    api("org.springframework:spring-web:6.2.8")
-    api("org.springframework:spring-webmvc:6.2.10")
-    compileOnly("jakarta.servlet:jakarta.servlet-api:6.0.0")
-    compileOnly("org.slf4j:slf4j-api:2.0.9")
-    compileOnly("org.springframework.boot:spring-boot-starter-web:3.5.6")
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    // Spring Boot BOM для управления версиями
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.6"))
+
+    // Jakarta BOM для управления Jakarta версиями
+    implementation(platform("jakarta.platform:jakarta.jakartaee-bom:11.0.0"))
+
+    // Spring Boot starters - compileOnly так как библиотека не должна включать их в себя
+    compileOnly("org.springframework.boot:spring-boot-starter-web")
+    compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
+    compileOnly("org.springframework.boot:spring-boot-starter-validation")
+
+    // Jakarta API - api так как они нужны пользователям библиотеки
+    api("jakarta.persistence:jakarta.persistence-api")
+    api("jakarta.validation:jakarta.validation-api")
+
+    // Hibernate Validator - compileOnly так как это реализация, может быть другой
+    compileOnly("org.hibernate.validator:hibernate-validator")
+
+    // Spring Framework - api так как они нужны для работы с вашими классами
+    api("org.springframework.data:spring-data-jpa")
+    api("org.springframework:spring-tx")
+    api("org.springframework:spring-web")
+    api("org.springframework:spring-webmvc")
+
+    // Jakarta Servlet API
+    compileOnly("jakarta.servlet:jakarta.servlet-api")
+
+    // Logging
+    compileOnly("org.slf4j:slf4j-api")
+
+    // Lombok - используем последнюю стабильную версию
+    compileOnly("org.projectlombok:lombok:1.18.38")
+    annotationProcessor("org.projectlombok:lombok:1.18.38")
+    testAnnotationProcessor("org.projectlombok:lombok:1.18.38")
+
+    // Testing
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(platform("org.junit:junit-bom:5.12.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 }
+
 
 tasks.test {
     useJUnitPlatform()
