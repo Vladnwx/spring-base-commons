@@ -1,0 +1,43 @@
+# Этот рабочий процесс использует действия, которые не сертифицированы GitHub.
+# Они предоставляются третьими лицами и регулируются
+# отдельными условиями использования, политикой конфиденциальности и документацией поддержки.
+# Данный рабочий процесс будет собирать пакет с помощью Gradle, а затем публиковать его в GitHub Packages при создании релиза
+# Для получения дополнительной информации см.: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#Publishing-using-gradle
+
+name: Публикация пакета в GitHub Packages через Gradle
+
+on:
+  release:
+    types: [created] # Триггер события: запуск при создании нового релиза
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest # Используется последняя версия Ubuntu для выполнения задачи
+    permissions:
+      contents: read       # Разрешение на чтение содержимого репозитория
+      packages: write      # Разрешение на запись (публикацию) пакетов
+
+    steps:
+      - uses: actions/checkout@v4 # Шаг: клонирование репозитория
+      - name: Установка JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'          # Версия Java
+          distribution: 'temurin'     # Дистрибутив Java (Eclipse Temurin)
+          server-id: github           # ID сервера из pom.xml (для Maven, но здесь используется Gradle)
+          settings-path: ${{ github.workspace }} # Путь к settings.xml (настройки Maven/Gradle)
+
+      - name: Настройка Gradle
+        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+        # Подключение официального экшена Gradle для ускорения сборки и кэширования
+
+      - name: Сборка проекта с помощью Gradle
+        run: ./gradlew build # Запуск команды сборки проекта
+
+      # Переменные USERNAME и TOKEN должны соответствовать переменным окружения, используемым
+      # в разделе публикации файла build.gradle
+      - name: Публикация в GitHub Packages
+        run: ./gradlew publish # Команда Gradle для публикации артефакта
+        env:
+          USERNAME: ${{ github.actor }}     # Имя пользователя GitHub, инициировавшего действие
+          TOKEN: ${{ secrets.GITHUB_TOKEN }} # Встроенный токен GitHub для аутентификации

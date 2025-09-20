@@ -3,13 +3,14 @@ name: Release
 on:
   push:
     tags:
-      - 'v*' # Запускается при пуше тегов, начинающихся с 'v'
+      - 'v*'
+      # Запускается при пуше тегов, начинающихся с 'v'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Изменено с read на write для создания релизов
       packages: write
 
     steps:
@@ -28,20 +29,36 @@ jobs:
       - name: Выдача прав на выполнение gradlew
         run: chmod +x gradlew
 
-      - name: Сборка и публикация
-        run: ./gradlew build publish
+      - name: Сборка проекта
+        run: ./gradlew build
+
+      - name: Публикация в GitHub Packages
+        run: ./gradlew publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен для публикации в GitHub Packages
 
       - name: Создание релиза на GitHub
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }} # Используем созданный тег
+          tag_name: ${{ github.ref_name }} # Исправлено: используем имя тега без префикса refs/tags/
           name: Release ${{ github.ref_name }}
           body: |
             Автоматический релиз для версии ${{ github.ref_name }}
+            
+            ## Что нового
             - Собран и опубликован артефакт в GitHub Packages
+            - Версия: ${{ github.ref_name }}
+            
+            ## Как использовать
+            ```gradle
+            dependencies {
+                implementation 'ваш_группа:ваш_артефакт:${{ github.ref_name }}'
+            }
+            ```
           draft: false
           prerelease: false
+          generate_release_notes: true # Автоматическая генерация примечаний к релизу
+          files: |
+            build/libs/*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
