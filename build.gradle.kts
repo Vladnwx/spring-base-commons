@@ -42,6 +42,7 @@ dependencies {
     // SLF4J для логирования
     compileOnly("org.slf4j:slf4j-api:2.0.9")
 
+    compileOnly("org.springframework.boot:spring-boot-starter-web:3.5.6")
     // Для тестов
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
