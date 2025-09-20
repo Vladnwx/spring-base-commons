@@ -39,7 +39,7 @@ jobs:
           
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update version in gradle.properties
+      - name: Update version in version
         run: |
           sed -i "s/version=.*/version=${{ steps.version.outputs.new_version }}-SNAPSHOT/" gradle.properties
 

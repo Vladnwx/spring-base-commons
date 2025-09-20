@@ -85,6 +85,6 @@ release {
     tagCommitMessage.set("[Gradle Release Plugin] - creating tag: ")
     newVersionCommitMessage.set("[Gradle Release Plugin] - new version commit: ")
     tagTemplate.set("v\$version") // Используем \$ для экранирования $ в Kotlin DSL
-    versionPropertyFile.set("gradle.properties")
+    versionPropertyFile.set("version")
     versionProperties.set(listOf("version"))
 }
