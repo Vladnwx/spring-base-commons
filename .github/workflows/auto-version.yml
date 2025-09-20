@@ -1,0 +1,129 @@
+name: Auto Version Bump
+
+# Запускать при пуше в основную ветку
+on:
+  push:
+    branches:
+      - main
+  # Также можно запускать вручную
+  workflow_dispatch:
+    inputs:
+      version_part:
+        description: 'Какую часть версии увеличить?'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  version-bump:
+    # Работаем только если коммит НЕ был сделан этим же workflow
+    # (чтобы избежать бесконечного цикла)
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Нужно для пуша коммитов и тегов
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth: 0 нужно для получения всех тегов
+          fetch-depth: 0
+          # Токен нужен для пуша
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Determine version increment type
+        id: version_type
+        run: |
+          # Если запущено вручную, используем ввод пользователя
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.version_part }}" >> $GITHUB_OUTPUT
+          else
+            # По умолчанию увеличиваем патч-версию
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Get current version from gradle.properties
+        id: current_version
+        run: |
+          # Извлекаем текущую версию из gradle.properties
+          VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          if [ -z "$VERSION" ]; then
+            echo "Ошибка: Не удалось найти версию в gradle.properties"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Убираем -SNAPSHOT для расчета следующей версии
+          CLEAN_VERSION=$(echo "$VERSION" | sed 's/-SNAPSHOT$//')
+          echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          CURRENT_VERSION="${{ steps.current_version.outputs.clean_version }}"
+          VERSION_PART="${{ steps.version_type.outputs.type }}"
+          
+          # Разбиваем версию на части
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]:-0}
+          MINOR=${VERSION_PARTS[1]:-0}
+          PATCH=${VERSION_PARTS[2]:-0}
+          
+          # Увеличиваем нужную часть
+          case $VERSION_PART in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch|*)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Update gradle.properties version
+        run: |
+          # Заменяем строку version=... в gradle.properties
+          sed -i "s/^version=.*/version=${{ steps.next_version.outputs.version }}-SNAPSHOT/" gradle.properties
+        shell: bash
+
+      - name: Commit and push version update
+        run: |
+          git add gradle.properties
+          git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          git push origin main
+        shell: bash
+
+      - name: Create and push Git tag
+        run: |
+          TAG_NAME="v${{ steps.next_version.outputs.version }}"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+        shell: bash
+
+      - name: Print summary
+        run: |
+          echo "✅ Версия успешно увеличена!"
+          echo "Текущая версия в gradle.properties: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          echo "Создан тег: v${{ steps.next_version.outputs.version }}"
+          echo "Это автоматически запустит workflow публикации (publish.yml)"
+        shell: bash
