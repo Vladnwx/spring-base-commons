@@ -4,7 +4,7 @@
 # Данный рабочий процесс будет собирать пакет с помощью Gradle, а затем публиковать его в GitHub Packages при создании релиза
 # Для получения дополнительной информации см.: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#Publishing-using-gradle
 
-name: Публикация пакета в GitHub Packages через Gradle
+name: public Package in GitHub Packages with Gradle
 
 on:
   release:
