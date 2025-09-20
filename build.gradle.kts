@@ -1,10 +1,11 @@
 plugins {
     `java-library`
     `maven-publish`
+    id("net.researchgate.release") version "3.0.2"
 }
 
 group = "ru.savelevvn"
-version = "1.1-SNAPSHOT"
+//version = "1.1-SNAPSHOT"
 
 java {
     toolchain {
@@ -68,9 +69,22 @@ publishing {
         create<MavenPublication>("maven") {
             groupId = "ru.savelevvn"
             artifactId = "spring-base-commons"
-            version = version
+            version = project.version.toString()
 
             from(components["java"])
         }
     }
+}
+
+// Настройка плагина релизов
+release {
+    failOnSnapshotDependencies.set(false)
+    revertOnFail.set(true)
+    preCommitText.set("")
+    preTagCommitMessage.set("[Gradle Release Plugin] - pre tag commit: ")
+    tagCommitMessage.set("[Gradle Release Plugin] - creating tag: ")
+    newVersionCommitMessage.set("[Gradle Release Plugin] - new version commit: ")
+    tagTemplate.set("v\$version") // Используем \$ для экранирования $ в Kotlin DSL
+    versionPropertyFile.set("gradle.properties")
+    versionProperties.set(listOf("version"))
 }
