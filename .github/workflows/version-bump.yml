@@ -94,13 +94,13 @@ jobs:
       - name: Коммит и пуш обновления версии
         run: |
           git add version
-          git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT [skip ci]"
           git push origin master
 
       - name: Создание и пуш тега
         run: |
           TAG_NAME="v${{ steps.next_version.outputs.version }}"
-          git tag $TAG_NAME
+          git tag -a $TAG_NAME -m "Release version ${{ steps.next_version.outputs.version }}"
           git push origin $TAG_NAME
 
       - name: Вывод результатов
@@ -108,3 +108,4 @@ jobs:
           echo "✅ Версия успешно увеличена!"
           echo "Текущая версия: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
           echo "Создан тег: v${{ steps.next_version.outputs.version }}"
+          echo "Релиз будет создан автоматически после пуша тега"

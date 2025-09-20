@@ -32,3 +32,16 @@ jobs:
         run: ./gradlew build publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен для публикации в GitHub Packages
+
+      - name: Создание релиза на GitHub
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }} # Используем созданный тег
+          name: Release ${{ github.ref_name }}
+          body: |
+            Автоматический релиз для версии ${{ github.ref_name }}
+            - Собран и опубликован артефакт в GitHub Packages
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
