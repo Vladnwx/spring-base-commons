@@ -2,11 +2,11 @@ name: Version Bump
 
 on:
   push:
-    branches: [master]
-  workflow_dispatch:
+    branches: [master] # Запуск при пуше в master
+  workflow_dispatch: # Возможность ручного запуска
     inputs:
       version_part:
-        description: 'Which part to bump?'
+        description: 'Какую часть версии увеличить?'
         required: true
         default: 'patch'
         type: choice
@@ -17,51 +17,57 @@ on:
 
 jobs:
   version-bump:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' # Исключаем запуск от бота
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Права на запись для пуша изменений
 
     steps:
-      - name: Checkout repository
+      - name: Клонирование репозитория
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # Полная история для работы с тегами
+          token: ${{ secrets.GITHUB_TOKEN }} # Токен для пуша изменений
 
-      - name: Set up Git user
+      - name: Настройка пользователя Git
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Determine version increment type
+      - name: Определение типа увеличения версии
         id: version_type
         run: |
+          # Если запущено вручную, используем ввод пользователя
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ github.event.inputs.version_part }}" >> $GITHUB_OUTPUT
           else
+            # По умолчанию увеличиваем патч-версию
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
-      - name: Get current version
+      - name: Получение текущей версии
         id: current_version
         run: |
+          # Читаем версию из файла version
           VERSION=$(cat version | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          # Убираем -SNAPSHOT для расчета следующей версии
           CLEAN_VERSION=$(echo "$VERSION" | sed 's/-SNAPSHOT$//')
           echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Calculate next version
+      - name: Расчет следующей версии
         id: next_version
         run: |
           CURRENT_VERSION="${{ steps.current_version.outputs.clean_version }}"
           VERSION_PART="${{ steps.version_type.outputs.type }}"
           
+          # Разбиваем версию на части
           IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
           MAJOR=${VERSION_PARTS[0]:-0}
           MINOR=${VERSION_PARTS[1]:-0}
           PATCH=${VERSION_PARTS[2]:-0}
           
+          # Увеличиваем нужную часть версии
           case $VERSION_PART in
             major)
               MAJOR=$((MAJOR + 1))
@@ -80,24 +86,25 @@ jobs:
           NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update version file
+      - name: Обновление файла версии
         run: |
+          # Записываем новую версию в файл version
           echo "${{ steps.next_version.outputs.version }}-SNAPSHOT" > version
 
-      - name: Commit and push version update
+      - name: Коммит и пуш обновления версии
         run: |
           git add version
           git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT"
           git push origin master
 
-      - name: Create and push Git tag
+      - name: Создание и пуш тега
         run: |
           TAG_NAME="v${{ steps.next_version.outputs.version }}"
           git tag $TAG_NAME
           git push origin $TAG_NAME
 
-      - name: Print summary
+      - name: Вывод результатов
         run: |
-          echo "✅ Version successfully bumped!"
-          echo "Current version: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
-          echo "Created tag: v${{ steps.next_version.outputs.version }}"
+          echo "✅ Версия успешно увеличена!"
+          echo "Текущая версия: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          echo "Создан тег: v${{ steps.next_version.outputs.version }}"

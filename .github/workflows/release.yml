@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*' # Запускается при пуше тегов, начинающихся с 'v'
 
 jobs:
   publish:
@@ -15,20 +15,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Полная история коммитов для работы с тегами
 
-      - name: Set up JDK 21
+      - name: Установка JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          server-id: github
-          settings-path: ${{ github.workspace }}
+          server-id: github # Идентификатор сервера для публикации
+          settings-path: ${{ github.workspace }} # Путь к настройкам Maven
 
-      - name: Grant execute permission for gradlew
+      - name: Выдача прав на выполнение gradlew
         run: chmod +x gradlew
 
-      - name: Build and publish
+      - name: Сборка и публикация
         run: ./gradlew build publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Токен для публикации в GitHub Packages
