@@ -56,7 +56,7 @@ jobs:
       - name: Get current version from version
         id: current_version
         run: |
-          # Извлекаем текущую версию из gradle.properties
+          # Извлекаем текущую версию из version
           VERSION=$(grep '^version=' version | cut -d'=' -f2)
           if [ -z "$VERSION" ]; then
             echo "Ошибка: Не удалось найти версию в version"
@@ -102,13 +102,13 @@ jobs:
 
       - name: Update version version
         run: |
-          # Заменяем строку version=... в gradle.properties
+          # Заменяем строку version=... в version
           sed -i "s/^version=.*/version=${{ steps.next_version.outputs.version }}-SNAPSHOT/" version
         shell: bash
 
       - name: Commit and push version update
         run: |
-          git add gradle.properties
+          git add version
           git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT"
           git push origin main
         shell: bash
@@ -123,7 +123,7 @@ jobs:
       - name: Print summary
         run: |
           echo "✅ Версия успешно увеличена!"
-          echo "Текущая версия в gradle.properties: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          echo "Текущая версия в version: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
           echo "Создан тег: v${{ steps.next_version.outputs.version }}"
           echo "Это автоматически запустит workflow публикации (publish.yml)"
         shell: bash
