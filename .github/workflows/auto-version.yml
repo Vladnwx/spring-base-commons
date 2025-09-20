@@ -57,9 +57,9 @@ jobs:
         id: current_version
         run: |
           # Извлекаем текущую версию из gradle.properties
-          VERSION=$(grep '^version=' gradle.properties | cut -d'=' -f2)
+          VERSION=$(grep '^version=' version | cut -d'=' -f2)
           if [ -z "$VERSION" ]; then
-            echo "Ошибка: Не удалось найти версию в gradle.properties"
+            echo "Ошибка: Не удалось найти версию в version"
             exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -103,7 +103,7 @@ jobs:
       - name: Update version version
         run: |
           # Заменяем строку version=... в gradle.properties
-          sed -i "s/^version=.*/version=${{ steps.next_version.outputs.version }}-SNAPSHOT/" gradle.properties
+          sed -i "s/^version=.*/version=${{ steps.next_version.outputs.version }}-SNAPSHOT/" version
         shell: bash
 
       - name: Commit and push version update
