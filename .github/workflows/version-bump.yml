@@ -1,9 +1,9 @@
-name: Version Bump
+name: Version Bump and Release
 
 on:
   push:
-    branches: [master] # Запуск при пуше в master
-  workflow_dispatch: # Возможность ручного запуска
+    branches: [master]
+  workflow_dispatch:
     inputs:
       version_part:
         description: 'Какую часть версии увеличить?'
@@ -17,17 +17,18 @@ on:
 
 jobs:
   version-bump:
-    if: github.actor != 'github-actions[bot]' # Исключаем запуск от бота
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Права на запись для пуша изменений
+      contents: write
+      packages: write
 
     steps:
       - name: Клонирование репозитория
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Полная история для работы с тегами
-          token: ${{ secrets.GITHUB_TOKEN }} # Токен для пуша изменений
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Настройка пользователя Git
         run: |
@@ -37,21 +38,17 @@ jobs:
       - name: Определение типа увеличения версии
         id: version_type
         run: |
-          # Если запущено вручную, используем ввод пользователя
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ github.event.inputs.version_part }}" >> $GITHUB_OUTPUT
           else
-            # По умолчанию увеличиваем патч-версию
             echo "type=patch" >> $GITHUB_OUTPUT
           fi
 
       - name: Получение текущей версии
         id: current_version
         run: |
-          # Читаем версию из файла version
           VERSION=$(cat version | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Убираем -SNAPSHOT для расчета следующей версии
           CLEAN_VERSION=$(echo "$VERSION" | sed 's/-SNAPSHOT$//')
           echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
 
@@ -61,13 +58,11 @@ jobs:
           CURRENT_VERSION="${{ steps.current_version.outputs.clean_version }}"
           VERSION_PART="${{ steps.version_type.outputs.type }}"
           
-          # Разбиваем версию на части
           IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
           MAJOR=${VERSION_PARTS[0]:-0}
           MINOR=${VERSION_PARTS[1]:-0}
           PATCH=${VERSION_PARTS[2]:-0}
           
-          # Увеличиваем нужную часть версии
           case $VERSION_PART in
             major)
               MAJOR=$((MAJOR + 1))
@@ -88,7 +83,6 @@ jobs:
 
       - name: Обновление файла версии
         run: |
-          # Записываем новую версию в файл version
           echo "${{ steps.next_version.outputs.version }}-SNAPSHOT" > version
 
       - name: Коммит и пуш обновления версии
@@ -103,9 +97,57 @@ jobs:
           git tag -a $TAG_NAME -m "Release version ${{ steps.next_version.outputs.version }}"
           git push origin $TAG_NAME
 
-      - name: Вывод результатов
-        run: |
-          echo "✅ Версия успешно увеличена!"
-          echo "Текущая версия: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
-          echo "Создан тег: v${{ steps.next_version.outputs.version }}"
-          echo "Релиз будет создан автоматически после пуша тега"
+      - name: Установка JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+
+      - name: Выдача прав на выполнение gradlew
+        run: chmod +x gradlew
+
+      - name: Сборка проекта
+        run: ./gradlew build
+
+      - name: Публикация в GitHub Packages
+        run: ./gradlew publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Создание релиза на GitHub
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.next_version.outputs.version }}
+          name: Release v${{ steps.next_version.outputs.version }}
+          body: |
+            Автоматический релиз для версии v${{ steps.next_version.outputs.version }}
+            
+            ## Что нового
+            - Собран и опубликован артефакт в GitHub Packages
+            - Версия: v${{ steps.next_version.outputs.version }}
+            
+            ## Как использовать
+            ```gradle
+            repositories {
+                maven {
+                    url 'https://maven.pkg.github.com/${{ github.repository }}'
+                    credentials {
+                        username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                        password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+                    }
+                }
+            }
+            
+            dependencies {
+                implementation 'ваш_группа:ваш_артефакт:v${{ steps.next_version.outputs.version }}'
+            }
+            ```
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            build/libs/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
