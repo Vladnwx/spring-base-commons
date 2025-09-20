@@ -3,7 +3,7 @@ name: Auto Release
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   release:
@@ -41,7 +41,7 @@ jobs:
 
       - name: Update version in version
         run: |
-          sed -i "s/version=.*/version=${{ steps.version.outputs.new_version }}-SNAPSHOT/" gradle.properties
+          sed -i "s/version=.*/version=${{ steps.version.outputs.new_version }}-SNAPSHOT/" version
 
       - name: Commit and push version update
         run: |
