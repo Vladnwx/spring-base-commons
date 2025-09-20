@@ -4,7 +4,7 @@ name: Auto Version Bump
 on:
   push:
     branches:
-      - main
+      - master
   # Также можно запускать вручную
   workflow_dispatch:
     inputs:
