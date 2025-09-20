@@ -1,0 +1,103 @@
+name: Version Bump
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version_part:
+        description: 'Which part to bump?'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  version-bump:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Determine version increment type
+        id: version_type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.version_part }}" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(cat version | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          CLEAN_VERSION=$(echo "$VERSION" | sed 's/-SNAPSHOT$//')
+          echo "clean_version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          CURRENT_VERSION="${{ steps.current_version.outputs.clean_version }}"
+          VERSION_PART="${{ steps.version_type.outputs.type }}"
+          
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]:-0}
+          MINOR=${VERSION_PARTS[1]:-0}
+          PATCH=${VERSION_PARTS[2]:-0}
+          
+          case $VERSION_PART in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch|*)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+          
+          NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update version file
+        run: |
+          echo "${{ steps.next_version.outputs.version }}-SNAPSHOT" > version
+
+      - name: Commit and push version update
+        run: |
+          git add version
+          git commit -m "Bump version to ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          git push origin master
+
+      - name: Create and push Git tag
+        run: |
+          TAG_NAME="v${{ steps.next_version.outputs.version }}"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
+      - name: Print summary
+        run: |
+          echo "✅ Version successfully bumped!"
+          echo "Current version: ${{ steps.next_version.outputs.version }}-SNAPSHOT"
+          echo "Created tag: v${{ steps.next_version.outputs.version }}"
