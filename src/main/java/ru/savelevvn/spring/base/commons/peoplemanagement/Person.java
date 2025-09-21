@@ -16,6 +16,26 @@ import java.time.LocalDate;
 /**
  * Абстрактный класс, представляющий общую информацию о человеке.
  * Используется как базовый класс для конкретных типов пользователей (например, Employee, Student и т.д.)
+ *
+ * <p>Предоставляет полный набор персональных данных с валидацией и бизнес-логикой.
+ * Поддерживает механизмы soft delete и аудит изменений.
+ *
+ * <p>Пример использования:
+ * <pre>
+ * {@code
+ * @Entity
+ * @Table(name = "employees")
+ * public class Employee extends Person {
+ *     // Специфичные поля для сотрудника
+ * }
+ * }
+ * </pre>
+ *
+ * @author Savelev Vladimir
+ * @version 1.0
+ * @see BaseEntity
+ * @see Gender
+ * @see MaritalStatus
  */
 @Getter
 @Setter
@@ -23,6 +43,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
+@ToString(callSuper = true, of = {"firstName", "lastName", "email"})
+@EqualsAndHashCode(callSuper = true, of = {"email", "passportSeries", "passportNumber"})
 public abstract class Person extends BaseEntity<Long> {
 
     /**
@@ -170,6 +192,46 @@ public abstract class Person extends BaseEntity<Long> {
     private String notes;
 
     /**
+     * Предобработка сущности перед сохранением.
+     * Может быть переопределена в подклассах для реализации специфической логики.
+     */
+    protected void prePersist() {
+        // Нормализация данных перед сохранением
+        if (this.email != null) {
+            this.email = this.email.toLowerCase().trim();
+        }
+        if (this.firstName != null) {
+            this.firstName = this.firstName.trim();
+        }
+        if (this.lastName != null) {
+            this.lastName = this.lastName.trim();
+        }
+        if (this.middleName != null) {
+            this.middleName = this.middleName.trim();
+        }
+    }
+
+    /**
+     * Валидация сущности перед сохранением.
+     * Может быть переопределена в подклассах для реализации бизнес-валидации.
+     *
+     * @throws IllegalArgumentException если сущность не прошла валидацию
+     */
+    protected void validate() {
+        // Проверка корректности паспортных данных
+        if (passportSeries != null && passportNumber != null) {
+            if (passportSeries.length() + passportNumber.length() > 30) {
+                throw new IllegalArgumentException("Серия и номер паспорта слишком длинные");
+            }
+        }
+
+        // Проверка возраста при наличии даты рождения
+        if (birthDate != null && birthDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Дата рождения не может быть в будущем");
+        }
+    }
+
+    /**
      * Получение полного имени человека (Фамилия Имя Отчество).
      *
      * @return Полное имя человека.
@@ -184,6 +246,23 @@ public abstract class Person extends BaseEntity<Long> {
     }
 
     /**
+     * Получение формального обращения к человеку.
+     *
+     * @return Формальное обращение (Г-н/Г-жа + Фамилия)
+     */
+    @Transient
+    public String getFormalAddress() {
+        StringBuilder address = new StringBuilder();
+        if (gender != null) {
+            address.append(gender == Gender.MALE ? "Г-н " : "Г-жа ");
+        }
+        if (lastName != null) {
+            address.append(lastName);
+        }
+        return address.toString().trim();
+    }
+
+    /**
      * Проверяет, достиг ли человек совершеннолетия.
      *
      * @return true, если человеку 18 лет или больше.
@@ -191,6 +270,108 @@ public abstract class Person extends BaseEntity<Long> {
     @Transient
     public boolean isAdult() {
         if (birthDate == null) return false;
-        return birthDate.plusYears(18).isBefore(LocalDate.now()) || birthDate.plusYears(18).isEqual(LocalDate.now());
+        return !birthDate.plusYears(18).isAfter(LocalDate.now());
+    }
+
+    /**
+     * Проверяет, является ли человек пенсионером.
+     * Мужчины - после 65 лет, женщины - после 60 лет.
+     *
+     * @return true, если человек является пенсионером.
+     */
+    @Transient
+    public boolean isPensioner() {
+        if (birthDate == null || gender == null) return false;
+
+        LocalDate pensionAge = gender == Gender.MALE ?
+                birthDate.plusYears(65) : birthDate.plusYears(60);
+
+        return !pensionAge.isAfter(LocalDate.now());
+    }
+
+    /**
+     * Получает возраст человека в годах.
+     *
+     * @return Возраст в годах или -1, если дата рождения не указана.
+     */
+    @Transient
+    public int getAge() {
+        if (birthDate == null) return -1;
+        return LocalDate.now().getYear() - birthDate.getYear();
+    }
+
+    /**
+     * Проверяет, является ли email корпоративным.
+     *
+     * @return true, если email содержит домен организации.
+     */
+    @Transient
+    public boolean isCorporateEmail() {
+        if (email == null) return false;
+        // Может быть переопределен в подклассах
+        return email.contains("@company.com") || email.contains("@organization.com");
+    }
+
+    /**
+     * Проверяет, заполнены ли паспортные данные полностью.
+     *
+     * @return true, если все паспортные данные заполнены.
+     */
+    @Transient
+    public boolean isPassportComplete() {
+        return passportSeries != null && !passportSeries.isEmpty() &&
+                passportNumber != null && !passportNumber.isEmpty() &&
+                passportIssueDate != null &&
+                passportIssuer != null && !passportIssuer.isEmpty();
+    }
+
+    /**
+     * Проверяет, заполнены ли контактные данные.
+     *
+     * @return true, если хотя бы один контакт заполнен.
+     */
+    @Transient
+    public boolean hasContactInfo() {
+        return (email != null && !email.isEmpty()) ||
+                (phone != null && !phone.isEmpty()) ||
+                (address != null && !address.isEmpty());
+    }
+
+    /**
+     * Получает возрастную категорию человека.
+     *
+     * @return Возрастная категория.
+     */
+    @Transient
+    public AgeCategory getAgeCategory() {
+        int age = getAge();
+        if (age < 0) return AgeCategory.UNKNOWN;
+        if (age < 18) return AgeCategory.CHILD;
+        if (age < 30) return AgeCategory.YOUNG_ADULT;
+        if (age < 50) return AgeCategory.ADULT;
+        if (age < 65) return AgeCategory.MIDDLE_AGED;
+        return AgeCategory.SENIOR;
+    }
+
+    /**
+     * Перечисление возрастных категорий.
+     */
+    public enum AgeCategory {
+        UNKNOWN("Неизвестно"),
+        CHILD("Ребенок"),
+        YOUNG_ADULT("Молодой взрослый"),
+        ADULT("Взрослый"),
+        MIDDLE_AGED("Среднего возраста"),
+        SENIOR("Пожилой");
+
+        private final String description;
+
+        AgeCategory(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
     }
 }

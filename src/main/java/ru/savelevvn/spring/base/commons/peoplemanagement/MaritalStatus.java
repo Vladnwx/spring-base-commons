@@ -21,6 +21,8 @@ package ru.savelevvn.spring.base.commons.peoplemanagement;
  * }
  * </pre>
  *
+ * @author Savelev Vladimir
+ * @version 1.0
  * @since 1.0
  * @see Person
  */
@@ -30,23 +32,65 @@ public enum MaritalStatus {
      * Холост или незамужем.
      * Сохраняется в базе данных как строка "SINGLE".
      */
-    SINGLE,
+    SINGLE("Холост/Незамужем"),
 
     /**
      * Женат или замужем.
      * Сохраняется в базе данных как строка "MARRIED".
      */
-    MARRIED,
+    MARRIED("Женат/Замужем"),
 
     /**
      * В разводе.
      * Сохраняется в базе данных как строка "DIVORCED".
      */
-    DIVORCED,
+    DIVORCED("В разводе"),
 
     /**
      * Вдовец или вдова.
      * Сохраняется в базе данных как строка "WIDOWED".
      */
-    WIDOWED
+    WIDOWED("Вдовец/Вдова");
+
+    private final String description;
+
+    MaritalStatus(String description) {
+        this.description = description;
+    }
+
+    /**
+     * Получает описание семейного положения.
+     *
+     * @return Описание семейного положения на русском языке.
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * Проверяет, является ли человек женатым/замужним.
+     *
+     * @return true, если человек женат или замужем.
+     */
+    public boolean isMarried() {
+        return this == MARRIED;
+    }
+
+    /**
+     * Проверяет, является ли человек одиноким.
+     *
+     * @return true, если человек холост или незамужем.
+     */
+    public boolean isSingle() {
+        return this == SINGLE;
+    }
+
+    /**
+     * Проверяет, имеет ли человек опыт брака.
+     *
+     * @return true, если человек был женат/замужем.
+     */
+    public boolean hasMarriageExperience() {
+        return this == MARRIED || this == DIVORCED || this == WIDOWED;
+    }
 }
