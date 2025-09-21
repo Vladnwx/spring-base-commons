@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layouts/base}">
 <head>
-    <title>Error</title>
+    <title>Ошибка</title>
 </head>
 <body>
 <div layout:fragment="content">
@@ -11,23 +11,30 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="text-center">
+                    <!--/* Отображение кода ошибки HTTP */-->
                     <div class="error-code mb-4">
-                        <h1 class="display-1 fw-bold" th:text="${errorCode ?: 'Error'}">Error</h1>
+                        <h1 class="display-1 fw-bold" th:text="${errorCode ?: 'Ошибка'}">Ошибка</h1>
                     </div>
+
+                    <!--/* Отображение заголовка ошибки */-->
                     <div class="error-title mb-4">
-                        <h2 th:text="${errorTitle ?: 'Something went wrong'}">Something went wrong</h2>
+                        <h2 th:text="${errorTitle ?: 'Что-то пошло не так'}">Что-то пошло не так</h2>
                     </div>
+
+                    <!--/* Отображение подробного сообщения об ошибке */-->
                     <div class="error-message mb-4">
-                        <p class="lead" th:text="${errorMessage ?: 'An unexpected error occurred'}">
-                            An unexpected error occurred
+                        <p class="lead" th:text="${errorMessage ?: 'Произошла непредвиденная ошибка'}">
+                            Произошла непредвиденная ошибка
                         </p>
                     </div>
+
+                    <!--/* Кнопки действий для пользователя */-->
                     <div class="error-actions">
                         <a href="/" class="btn btn-primary btn-lg me-2">
-                            <i class="fas fa-home"></i> Go Home
+                            <i class="fas fa-home"></i> На главную
                         </a>
                         <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
-                            <i class="fas fa-arrow-left"></i> Go Back
+                            <i class="fas fa-arrow-left"></i> Назад
                         </button>
                     </div>
                 </div>
@@ -37,4 +44,11 @@
 </div>
 </body>
 </html>
+<!--/*
+    Шаблон страницы ошибок для отображения пользовательских сообщений об ошибках
+    Использует данные, переданные из CustomErrorController:
+    - errorCode: код HTTP ошибки (404, 500, и т.д.)
+    - errorTitle: заголовок ошибки на русском языке
+    - errorMessage: подробное сообщение об ошибке на русском языке
+*/-->
 <!--/* thymeleaf комментарий будет удален  */-->
