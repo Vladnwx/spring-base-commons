@@ -148,7 +148,7 @@ public abstract class BaseService<T extends BaseEntity<ID>, ID extends Serializa
     @Transactional
     public void deleteById(ID id) {
         log.debug("Soft удаление сущности по ID: {}", id);
-        repository.softDeleteById(id, LocalDateTime.now());
+        repository.softDeleteById(id);
     }
 
     /**
