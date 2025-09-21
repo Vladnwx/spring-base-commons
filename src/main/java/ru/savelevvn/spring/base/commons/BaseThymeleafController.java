@@ -22,7 +22,6 @@ import java.util.Optional;
  * @param <T>  Тип сущности, должен наследоваться от BaseEntity
  * @param <ID> Тип идентификатора сущности
  * @param <S>  Тип сервиса, должен наследоваться от BaseService
- * @author Savelev Vladimir
  * @version 1.0
  */
 @Slf4j

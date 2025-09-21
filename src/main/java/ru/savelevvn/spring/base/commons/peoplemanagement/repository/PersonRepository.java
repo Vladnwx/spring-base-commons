@@ -30,7 +30,6 @@ import java.util.Optional;
  * <p>Использует JPA Specification для динамического построения запросов.
  *
  * @param <T> тип сущности, расширяющей Person
- * @author Savelev Vladimir
  * @version 1.0
  * @since 1.0
  * @see Person

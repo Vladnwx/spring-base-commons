@@ -37,7 +37,6 @@ import java.util.Optional;
  *
  * @param <T>  Тип сущности, должен наследоваться от BaseEntity
  * @param <ID> Тип идентификатора сущности
- * @author Savelev Vladimir
  * @version 1.0
  */
 @NoRepositoryBean

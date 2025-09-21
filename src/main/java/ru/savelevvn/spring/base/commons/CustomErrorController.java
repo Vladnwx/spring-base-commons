@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * Перехватывает все ошибки, возникающие в веб-приложении, и отображает
  * соответствующую страницу ошибки с понятным сообщением для пользователя.
  *
- * @author Savelev Vladimir
  * @version 1.0
  */
 @Controller

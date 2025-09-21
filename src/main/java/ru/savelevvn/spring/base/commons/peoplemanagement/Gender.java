@@ -19,7 +19,6 @@ package ru.savelevvn.spring.base.commons.peoplemanagement;
  * }
  * </pre>
  *
- * @author Savelev Vladimir
  * @version 1.0
  * @since 1.0
  * @see Person

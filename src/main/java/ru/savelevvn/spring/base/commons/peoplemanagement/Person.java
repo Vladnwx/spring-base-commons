@@ -31,7 +31,6 @@ import java.time.LocalDate;
  * }
  * </pre>
  *
- * @author Savelev Vladimir
  * @version 1.0
  * @see BaseEntity
  * @see Gender

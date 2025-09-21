@@ -26,7 +26,6 @@ import java.util.regex.Pattern;
  *
  * @param <T> тип сущности, расширяющей Person
  * @param <R> тип репозитория, расширяющего PersonRepository
- * @author Savelev Vladimir
  * @version 1.0
  */
 @Slf4j
