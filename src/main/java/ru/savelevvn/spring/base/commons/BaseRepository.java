@@ -1,5 +1,7 @@
 package ru.savelevvn.spring.base.commons;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -52,11 +54,27 @@ public interface BaseRepository<T extends BaseEntity<ID>, ID extends Serializabl
     List<T> findAllByDeletedAtIsNull();
 
     /**
+     * Находит все сущности, которые не были логически удалены с пагинацией.
+     *
+     * @param pageable параметры пагинации
+     * @return страница с неудаленными сущностями
+     */
+    Page<T> findAllByDeletedAtIsNull(Pageable pageable);
+
+    /**
      * Находит все сущности, которые были логически удалены.
      *
      * @return список всех удаленных сущностей
      */
     List<T> findAllByDeletedAtIsNotNull();
+
+    /**
+     * Находит все сущности, которые были логически удалены с пагинацией.
+     *
+     * @param pageable параметры пагинации
+     * @return страница с удаленными сущностями
+     */
+    Page<T> findAllByDeletedAtIsNotNull(Pageable pageable);
 
     /**
      * Находит сущность по идентификатору, если она не была логически удалена.
@@ -77,6 +95,18 @@ public interface BaseRepository<T extends BaseEntity<ID>, ID extends Serializabl
     @Transactional
     @Query("UPDATE #{#entityName} e SET e.deletedAt = CURRENT_TIMESTAMP WHERE e.id = :id AND e.deletedAt IS NULL")
     int softDeleteById(@Param("id") ID id);
+
+    /**
+     * Восстанавливает логически удаленную сущность по идентификатору.
+     * Устанавливает поле deletedAt в null.
+     *
+     * @param id идентификатор сущности для восстановления
+     * @return количество затронутых записей (0 или 1)
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE #{#entityName} e SET e.deletedAt = NULL WHERE e.id = :id AND e.deletedAt IS NOT NULL")
+    int restoreById(@Param("id") ID id);
 
     /**
      * Проверяет, существует ли сущность с указанным идентификатором
@@ -135,5 +165,4 @@ public interface BaseRepository<T extends BaseEntity<ID>, ID extends Serializabl
      * @return список сущностей, измененных указанным пользователем
      */
     List<T> findAllByLastModifiedBy(String lastModifiedBy);
-
 }

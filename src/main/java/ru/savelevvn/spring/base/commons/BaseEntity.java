@@ -102,6 +102,22 @@ public abstract class BaseEntity<ID>{
     }
 
     /**
+     * Помечает сущность как логически удаленную.
+     * Устанавливает текущее время в поле deletedAt.
+     */
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    /**
+     * Восстанавливает сущность после логического удаления.
+     * Устанавливает поле deletedAt в null.
+     */
+    public void restore() {
+        this.deletedAt = null;
+    }
+
+    /**
      * Проверяет, была ли сущность изменена после создания.
      *
      * @return true, если сущность была изменена, иначе false
