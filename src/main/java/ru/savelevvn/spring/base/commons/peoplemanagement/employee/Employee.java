@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import ru.savelevvn.spring.base.commons.peoplemanagement.Person;
@@ -18,7 +20,7 @@ import java.time.LocalDate;
  * Все перечисляемые типы (Gender, MaritalStatus, WorkSchedule, EmploymentType)
  * хранятся в базе данных в виде строковых значений.
  *
- * @since 1.0
+ * @version 1.0
  * @see Person
  * @see WorkSchedule
  * @see EmploymentType
@@ -29,6 +31,8 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @SuperBuilder
 @MappedSuperclass
+@ToString(callSuper = true, of = {"employeeId", "position", "department"})
+@EqualsAndHashCode(callSuper = true, of = {"employeeId"})
 public abstract class Employee extends Person {
 
     /**
@@ -39,6 +43,7 @@ public abstract class Employee extends Person {
      * <p>Пример: {@code "EMP001234"}, {@code "DEV567890"}
      */
     @Column(name = "employee_id", unique = true, length = 20)
+    @Pattern(regexp = "^[A-Z0-9_\\-]{1,20}$", message = "Некорректный формат ID сотрудника")
     private String employeeId;
 
     /**
@@ -111,6 +116,7 @@ public abstract class Employee extends Person {
      * <p>Пример: {@code 75000.0} (75,000.00 в указанной валюте)
      */
     @Column(name = "salary")
+    @DecimalMin(value = "0.0", message = "Заработная плата не может быть отрицательной")
     private Double salary;
 
     /**
@@ -121,6 +127,7 @@ public abstract class Employee extends Person {
      * <p>Пример: {@code "RUB"}, {@code "USD"}, {@code "EUR"}
      */
     @Column(name = "currency", length = 3)
+    @Pattern(regexp = "^[A-Z]{3}$", message = "Некорректный код валюты")
     private String currency;
 
     /**
@@ -229,12 +236,68 @@ public abstract class Employee extends Person {
     private String bankName;
 
     /**
+     * Предобработка сущности перед сохранением.
+     * Может быть переопределена в подклассах для реализации специфической логики.
+     */
+    @Override
+    protected void prePersist() {
+        super.prePersist();
+
+        // Нормализация данных сотрудника
+        if (this.employeeId != null) {
+            this.employeeId = this.employeeId.toUpperCase().trim();
+        }
+        if (this.position != null) {
+            this.position = this.position.trim();
+        }
+        if (this.department != null) {
+            this.department = this.department.trim();
+        }
+        if (this.workEmail != null) {
+            this.workEmail = this.workEmail.toLowerCase().trim();
+        }
+        if (this.currency != null) {
+            this.currency = this.currency.toUpperCase().trim();
+        }
+    }
+
+    /**
+     * Валидация сущности перед сохранением.
+     * Может быть переопределена в подклассах для реализации бизнес-валидации.
+     *
+     * @throws IllegalArgumentException если сущность не прошла валидацию
+     */
+    @Override
+    protected void validate() {
+        super.validate();
+
+        // Проверка корректности дат
+        if (hireDate != null && hireDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Дата приема на работу не может быть в будущем");
+        }
+
+        if (terminationDate != null && hireDate != null && terminationDate.isBefore(hireDate)) {
+            throw new IllegalArgumentException("Дата увольнения не может быть раньше даты приема на работу");
+        }
+
+        // Проверка валюты
+        if (salary != null && currency == null) {
+            throw new IllegalArgumentException("При указании зарплаты необходимо указать валюту");
+        }
+
+        // Проверка активности
+        if (Boolean.FALSE.equals(isActive) && terminationDate == null) {
+            throw new IllegalArgumentException("Для неактивного сотрудника необходимо указать дату увольнения");
+        }
+    }
+
+    /**
      * Проверяет, является ли сотрудник действующим.
      *
      * @return {@code true} если сотрудник активен, {@code false} если уволен
      */
     public boolean isActive() {
-        return Boolean.TRUE.equals(isActive);
+        return Boolean.TRUE.equals(isActive) && terminationDate == null;
     }
 
     /**
@@ -257,5 +320,149 @@ public abstract class Employee extends Person {
         }
         LocalDate endDate = (terminationDate != null) ? terminationDate : LocalDate.now();
         return java.time.temporal.ChronoUnit.DAYS.between(hireDate, endDate);
+    }
+
+    /**
+     * Получает продолжительность работы в годах.
+     *
+     * @return количество лет работы, или 0 если дата приема не указана
+     */
+    public int getYearsEmployed() {
+        if (hireDate == null) {
+            return 0;
+        }
+        LocalDate endDate = (terminationDate != null) ? terminationDate : LocalDate.now();
+        return (int) java.time.temporal.ChronoUnit.YEARS.between(hireDate, endDate);
+    }
+
+    /**
+     * Проверяет, является ли сотрудник новичком (менее 6 месяцев работы).
+     *
+     * @return {@code true} если сотрудник работает менее 6 месяцев
+     */
+    public boolean isRookie() {
+        return getDaysEmployed() < 180;
+    }
+
+    /**
+     * Проверяет, является ли сотрудник ветераном (более 5 лет работы).
+     *
+     * @return {@code true} если сотрудник работает более 5 лет
+     */
+    public boolean isVeteran() {
+        return getYearsEmployed() >= 5;
+    }
+
+    /**
+     * Получает стаж работы в формате "X лет Y месяцев".
+     *
+     * @return строковое представление стажа работы
+     */
+    public String getEmploymentPeriod() {
+        if (hireDate == null) {
+            return "Не определено";
+        }
+
+        LocalDate endDate = (terminationDate != null) ? terminationDate : LocalDate.now();
+        long totalMonths = java.time.temporal.ChronoUnit.MONTHS.between(hireDate, endDate);
+
+        long years = totalMonths / 12;
+        long months = totalMonths % 12;
+
+        StringBuilder result = new StringBuilder();
+        if (years > 0) {
+            result.append(years).append(" ").append(getYearForm(years));
+        }
+        if (months > 0) {
+            if (years > 0) result.append(" ");
+            result.append(months).append(" ").append(getMonthForm(months));
+        }
+
+        return !result.isEmpty() ? result.toString() : "Меньше месяца";
+    }
+
+    /**
+     * Проверяет, имеет ли сотрудник руководителя.
+     *
+     * @return {@code true} если у сотрудника есть руководитель
+     */
+    public boolean hasSupervisor() {
+        return supervisorId != null;
+    }
+
+    /**
+     * Проверяет, является ли сотрудник руководителем.
+     *
+     * @return {@code true} если у сотрудника есть подчиненные
+     */
+    public boolean isSupervisor() {
+        // Эта проверка должна быть реализована в сервисе
+        return false;
+    }
+
+    /**
+     * Проверяет, является ли сотрудник удаленным.
+     *
+     * @return {@code true} если сотрудник работает удаленно
+     */
+    public boolean isRemote() {
+        return workSchedule == WorkSchedule.REMOTE;
+    }
+
+    /**
+     * Получает форматированную заработную плату.
+     *
+     * @return строковое представление заработной платы
+     */
+    public String getFormattedSalary() {
+        if (salary == null || currency == null) {
+            return "Не указана";
+        }
+        return String.format("%.2f %s", salary, currency);
+    }
+
+    /**
+     * Проверяет, совпадает ли рабочий email с личным.
+     *
+     * @return {@code true} если рабочий и личный email совпадают
+     */
+    public boolean isWorkEmailSameAsPersonal() {
+        return getEmail() != null && workEmail != null && getEmail().equalsIgnoreCase(workEmail);
+    }
+
+    /**
+     * Получает форму слова "год" в зависимости от числа.
+     */
+    private String getYearForm(long years) {
+        long lastDigit = years % 10;
+        long lastTwoDigits = years % 100;
+
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+            return "лет";
+        } else if (lastDigit == 1) {
+            return "год";
+        } else if (lastDigit >= 2 && lastDigit <= 4) {
+            return "года";
+        } else {
+            return "лет";
+        }
+    }
+
+    /**
+     * Получает форму слова "месяц" в зависимости от числа.
+     */
+    private String getMonthForm(long months) {
+        long lastDigit = months % 10;
+        long lastTwoDigits = months % 100;
+
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 19) {
+            return "месяцев";
+        } else if (lastDigit == 1) {
+            return "месяц";
+        } else if (lastDigit >= 2 && lastDigit <= 4) {
+            return "месяца";
+        } else {
+            return "месяцев";
+        }
     }
 }
